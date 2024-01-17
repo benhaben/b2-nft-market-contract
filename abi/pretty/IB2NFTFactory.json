@@ -1,0 +1,4 @@
+[
+  "function createNFTCollection(string,string,uint256)",
+  "function isB2NFT(address) view returns (bool)"
+]

@@ -1,0 +1,2 @@
+export let ORACLE_SERVER_PRIVATE_KEY = process.env.ORACLE_SERVER_PRIVATE_KEY || ""
+export let DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || ""

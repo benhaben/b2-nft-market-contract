@@ -1,0 +1,9 @@
+.secret
+node_modules
+.idea
+abi
+artifacts
+cache
+.env
+deployments
+types

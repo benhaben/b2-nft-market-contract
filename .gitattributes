@@ -1,0 +1,6 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+*.ts lf
+*.js lf
+*.sol lf
+/node_modules/ -text
+core.autocrlf=true

@@ -1,0 +1,46 @@
+{
+  "name": "b2-nft-market-contract",
+  "license": "MIT",
+  "scripts": {
+    "flat": "cross-env NODE_ENV=l2  hardhat remove-spdx-flatten  \"./contracts/B2Marketplace.sol\" > scripts/B2Marketplace.sol.f.sol",
+    "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol'",
+    "clean": "rimraf -fr .openzeppelin abi artifacts cache typechain coverage",
+    "test": "cross-env NODE_ENV=l2 hardhat test",
+    "compile": "cross-env NODE_ENV=l2 hardhat compile --config hardhat.config.ts ",
+    "coverage": "cross-env NODE_ENV=l2  hardhat coverage",
+    "verify": "cross-env NODE_ENV=l2 hardhat --network l2 verify 0xF2265d757BAC73173577c835e7F5AE3182285d10 ",
+    "verify-goerli-market": "cross-env NODE_ENV=goerli hardhat --network goerli verify 0xf7A0122f5Aed75037e2789dabe7dDc72D51d64bf \"10\" \"0x00b34b516BBCcab8d15fB780664d98bc08150119\"",
+    "verify-goerli-factory": "cross-env NODE_ENV=goerli hardhat --network goerli verify 0xb0E23150282c05ae4e5E412977a23348281ea9a7",
+    "blockscout-goerli-factory": "cross-env NODE_ENV=goerli  hardhat --network goerli  blockscout-verify ./contracts/B2NFTFactory.sol 0xCE8328a0D278f36f552c52B681FbbA821c9ca0Cb --show-stack-traces",
+    "deploy-goerli": "cross-env NODE_ENV=goerli hardhat run scripts/deploy.ts --network goerli ",
+    "deploy-l2": "cross-env NODE_ENV=l2 hardhat run scripts/deploy.ts --network l2 "
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.4",
+    "@commitlint/config-conventional": "^18.4.4",
+    "@ericxstone/hardhat-blockscout-verify": "^1.0.2",
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.3",
+    "@openzeppelin/contracts": "^5.0.1",
+    "bignumber.js": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.9.2",
+    "hardhat": "^2.19.4",
+    "hardhat-abi-exporter": "^2.10.1",
+    "hardhat-spdx-license-identifier": "^2.2.0",
+    "husky": "^8.0.3",
+    "log4js": "^6.9.1",
+    "mocha-typescript": "^1.1.17",
+    "prettier": "^3.1.1",
+    "prettier-plugin-solidity": "^1.3.1",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged"
+    }
+  }
+}
