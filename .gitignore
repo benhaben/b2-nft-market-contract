@@ -20,3 +20,5 @@ global.dev.json
 .cmd
 .env.l2
 .env.goerli
+/abi/
+.openzeppelin/

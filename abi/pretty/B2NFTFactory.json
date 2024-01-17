@@ -1,6 +1,0 @@
-[
-  "event CreatedNFTCollection(address,address,string,string,string)",
-  "function createNFTCollection(string,string,string)",
-  "function getOwnCollections() view returns (address[])",
-  "function isB2NFT(address) view returns (bool)"
-]

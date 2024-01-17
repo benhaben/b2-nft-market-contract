@@ -6,9 +6,7 @@ import "hardhat-spdx-license-identifier"
 import { logger } from "./scripts/utilities/log";
 import { config as dotEnvConfig } from "dotenv";
 import path from "path";
-import "@ericxstone/hardhat-blockscout-verify";
-import {SOLIDITY_VERSION, EVM_VERSION} from "@ericxstone/hardhat-blockscout-verify";
-
+import '@openzeppelin/hardhat-upgrades';
 if (process.env.NODE_ENV) {
   const pathOfEnv = path.resolve(process.cwd(), `.env.${process.env.NODE_ENV}`);
   logger.debug(`pathOfEnv: ${pathOfEnv}`);
@@ -85,17 +83,6 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: `${process.env.ETHERSCAN_API_KEY}`, // Your Etherscan API key
-  },
-  blockscoutVerify: {
-    blockscoutURL: `${process.env.B_URL}`,
-    contracts: {
-      "B2NFTFactory": {
-        compilerVersion: "v0.8.20+commit.a1b79de6", // checkout enum SOLIDITY_VERSION
-        optimization: true,
-        evmVersion: "shanghai", // checkout enum EVM_VERSION
-        optimizationRuns: 200,
-      },
-    },
-  },
+  }
 };
 export default config;
