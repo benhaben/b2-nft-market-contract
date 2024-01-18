@@ -12,7 +12,8 @@
     "verify-goerli-market": "cross-env NODE_ENV=goerli hardhat --network goerli verify 0xf7A0122f5Aed75037e2789dabe7dDc72D51d64bf \"10\" \"0x00b34b516BBCcab8d15fB780664d98bc08150119\"",
     "verify-goerli-factory": "cross-env NODE_ENV=goerli hardhat --network goerli verify 0xb0E23150282c05ae4e5E412977a23348281ea9a7",
     "deploy-goerli": "cross-env NODE_ENV=goerli hardhat run scripts/deploy-l2-testnet/deploy.ts --network goerli ",
-    "deploy-b2-testnet": "cross-env NODE_ENV=l2 hardhat run scripts/deploy-l2-testnet/deploy.ts --network l2 "
+    "deploy-b2-testnet": "cross-env NODE_ENV=l2 hardhat run scripts/deploy-l2-testnet/deploy.ts --network l2 ",
+    "upgrade-b2-testnet-market": "cross-env NODE_ENV=l2 hardhat run scripts/deploy-l2-testnet/u001_upgrade_market.ts --network l2 "
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.4",
