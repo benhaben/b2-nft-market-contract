@@ -85,6 +85,18 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 price,
         address indexed seller
     );
+
+    event UnListedNFT(
+        address indexed nft,
+        uint256 indexed tokenId
+    );
+
+    event ModifyListedNFT(
+        address indexed nft,
+        uint256 indexed tokenId,
+        uint256 price
+    );
+
     event BoughtNFT(
         address indexed nft,
         uint256 indexed tokenId,
@@ -259,6 +271,17 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         emit ListedNFT(_nft, _tokenId, _payToken, _price, msg.sender);
     }
 
+    // @notice modify listed NFT
+    function modifyListedNFT(
+        address _nft,
+        uint256 _tokenId,
+        uint256 _price
+    ) external isListedNFT(_nft, _tokenId) {
+        require(listNfts[_nft][_tokenId].seller == msg.sender, "not listed owner");
+        listNfts[_nft][_tokenId].price = _price;
+        emit ModifyListedNFT(_nft, _tokenId, _price);
+    }
+
     // @notice Cancel listed NFT
     function cancelListedNFT(
         address _nft,
@@ -268,6 +291,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         require(listedNFT.seller == msg.sender, "not listed owner");
         IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
         delete listNfts[_nft][_tokenId];
+        emit UnListedNFT(_nft, _tokenId);
     }
 
     // @notice Buy listed NFT

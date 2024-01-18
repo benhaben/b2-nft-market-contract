@@ -131,10 +131,30 @@ describe("B2 Marketplace", () => {
       expect(eventTokenId).eq(tokenId, "TokenId is wrong.");
     });
 
+    it("Creator should modify listed item", async () => {
+      const modifyPrice = toWei(333);
+      await expect(
+         marketplace.connect(buyer).modifyListedNFT(await nft.getAddress(), tokenId, modifyPrice)
+      ).to.be.revertedWith("not listed owner")
+      const tx =await marketplace.connect(collectionCreator).modifyListedNFT(await nft.getAddress(), tokenId, modifyPrice);
+      const receipt = await tx.wait();
+      let log = receipt?.logs.find((log) => marketplace.interface.parseLog(log as any)?.name === "ModifyListedNFT") as EventLog;
+      const eventNFT = log.args.nft;
+      const eventTokenId = log.args.tokenId;
+      const price = log.args.price;
+      expect(eventNFT).eq(await nft.getAddress(), "NFT is wrong.");
+      expect(eventTokenId).eq(tokenId, "TokenId is wrong.");
+      expect(price).eq(modifyPrice, "Price is wrong.");
+    });
+
     it("Creator should cancel listed item", async () => {
-      await marketplace.connect(collectionCreator).cancelListedNFT(await nft.getAddress(), tokenId);
+      const tx =await marketplace.connect(collectionCreator).cancelListedNFT(await nft.getAddress(), tokenId);
+      const receipt = await tx.wait();
+      let log = receipt?.logs.find((log) => marketplace.interface.parseLog(log as any)?.name === "cancelListedNFT") as EventLog;
       expect(await nft.ownerOf(tokenId)).eq(await collectionCreator.getAddress(), "Cancel listed item is failed.");
     });
+
+
 
     it("Creator should list NFT on the marketplace again!", async () => {
       await nft.connect(collectionCreator).approve(await marketplace.getAddress(), tokenId);
