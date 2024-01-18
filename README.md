@@ -59,6 +59,11 @@ cross-env NODE_ENV=l2 npx hardhat --network l2 createCollection --royaltyrecipie
 ```
    cross-env NODE_ENV=l2 npx hardhat --network l2 list --pay <address> --market <address> --token <address> --price <amount> --id <id> --key <key>
 ```
+modify list
+
+```
+   cross-env NODE_ENV=l2 npx hardhat --network l2 list --pay <address> --market <address>  --price <amount> --id <id> --key <key>
+```
 
 10. buy nft
 ```

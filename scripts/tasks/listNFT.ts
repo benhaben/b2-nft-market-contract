@@ -30,3 +30,29 @@ task("list", "list nft")
       console.log("list nft end");
     }
   );
+
+task("modify", "modify list nft price")
+  .addParam("key", "sender key")
+  .addParam("nft", "nft Address")
+  .addParam("id", "nft id")
+  .addParam("price", "price")
+  .addParam("market", "Market Address")
+  .setAction(
+    async (
+      { key,  nft, id, pay, price, market }: any,
+      hre: HardhatRuntimeEnvironment
+    ) => {
+
+      console.log("modify list nft price start");
+      const ethers = hre.ethers;
+      market = B2NFTMarketplace__factory.connect( market,  new ethers.Wallet(key, ethers.provider));
+      const tx = await market.modifyListedNFT(
+        nft,
+        id,
+        ethers.parseEther(price)
+      );
+      const receipt = await tx.wait();
+      console.log(receipt.hash);
+      console.log("modify list nft price end");
+    }
+  );
