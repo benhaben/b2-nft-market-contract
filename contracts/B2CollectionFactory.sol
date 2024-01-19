@@ -26,10 +26,17 @@ contract B2CollectionFactory is IB2CollectionFactory, OwnableUpgradeable, Pausab
         uint256 royaltyFees
     );
 
-    event CloseNFTCollection(
+    event ModifyNFTCollection(
         address operator,
         address nft,
         bool active
+    );
+
+    event ModifyRoyaltyFee(
+        address operator,
+        address nft,
+        address royaltyRecipient,
+        uint256 royaltyFees
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -82,7 +89,7 @@ contract B2CollectionFactory is IB2CollectionFactory, OwnableUpgradeable, Pausab
         bool _active
     ) external isERC721(_nft) whenNotPaused onlyOwner {
         b2NFTs[address(_nft)] = _active;
-        emit CloseNFTCollection(msg.sender, address(_nft), _active);
+        emit ModifyNFTCollection(msg.sender, address(_nft), _active);
     }
 
     function setRoyaltyFee(address _nft, uint256 _royaltyFee, address _royaltyRecipient) external whenNotPaused onlyOwner {
@@ -91,6 +98,8 @@ contract B2CollectionFactory is IB2CollectionFactory, OwnableUpgradeable, Pausab
 
         royaltyFees[_nft] = _royaltyFee;
         royaltyRecipients[_nft] = _royaltyRecipient;
+        emit ModifyRoyaltyFee(msg.sender, address(_nft), _royaltyRecipient, _royaltyFee);
+
     }
 
     function getOwnCollections() external view returns (address[] memory) {

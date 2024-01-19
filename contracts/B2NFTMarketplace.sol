@@ -67,14 +67,14 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
 
     // nft => tokenId => offerer address => offer struct
     mapping(address => mapping(uint256 => mapping(address => OfferNFT)))
-        private offerNfts;
+    private offerNfts;
 
     // nft => tokenId => acuton struct
     mapping(address => mapping(uint256 => AuctionNFT)) private auctionNfts;
 
     // auciton index => bidding counts => bidder address => bid price
     mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
-        private bidPrices;
+    private bidPrices;
 
     // events
     event ListedNFT(
@@ -86,11 +86,13 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
     );
 
     event UnListedNFT(
+        address indexed seller,
         address indexed nft,
         uint256 indexed tokenId
     );
 
     event ModifyListedNFT(
+        address indexed seller,
         address indexed nft,
         uint256 indexed tokenId,
         uint256 price
@@ -101,6 +103,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 indexed tokenId,
         address payToken,
         uint256 price,
+        uint256 netPrice,
         address seller,
         address indexed buyer
     );
@@ -123,6 +126,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 indexed tokenId,
         address payToken,
         uint256 offerPrice,
+        uint256 netPrice,
         address offerer,
         address indexed nftOwner
     );
@@ -150,6 +154,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         address creator,
         address indexed winner,
         uint256 price,
+        uint256 netPrice,
         address caller
     );
 
@@ -244,7 +249,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 _tokenId,
         address _payToken,
         uint256 _price
-    ) external isPayableToken(_payToken) isActiveCollection(_nft){
+    ) external isPayableToken(_payToken) isActiveCollection(_nft) {
         IERC721 nft = IERC721(_nft);
         require(nft.ownerOf(_tokenId) == msg.sender, "not nft owner");
         nft.transferFrom(msg.sender, address(this), _tokenId);
@@ -265,10 +270,10 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         address _nft,
         uint256 _tokenId,
         uint256 _price
-    ) external isListedNFT(_nft, _tokenId) isActiveCollection(_nft){
+    ) external isListedNFT(_nft, _tokenId) isActiveCollection(_nft) {
         require(listNfts[_nft][_tokenId].seller == msg.sender, "not listed owner");
         listNfts[_nft][_tokenId].price = _price;
-        emit ModifyListedNFT(_nft, _tokenId, _price);
+        emit ModifyListedNFT(msg.sender, _nft, _tokenId, _price);
     }
 
     // @notice Cancel listed NFT
@@ -280,7 +285,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         require(listedNFT.seller == msg.sender, "not listed owner");
         IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
         delete listNfts[_nft][_tokenId];
-        emit UnListedNFT(_nft, _tokenId);
+        emit UnListedNFT(msg.sender, _nft, _tokenId);
     }
 
     // @notice Buy listed NFT
@@ -289,7 +294,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 _tokenId,
         address _payToken,
         uint256 _price
-    ) external isListedNFT(_nft, _tokenId) isActiveCollection(_nft){
+    ) external isListedNFT(_nft, _tokenId) isActiveCollection(_nft) {
         ListNFT storage listedNft = listNfts[_nft][_tokenId];
         require(
             _payToken != address(0) && _payToken == listedNft.payToken,
@@ -300,7 +305,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
 
         listedNft.sold = true;
 
-        uint256 totalPrice = _price;
+        uint256 netPrice = _price;
         address royaltyRecipient = collectionFactory.getRoyaltyRecipient(listedNft.nft);
         uint256 royaltyFee = collectionFactory.getRoyaltyFee(listedNft.nft);
 
@@ -313,7 +318,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
                 royaltyRecipient,
                 royaltyTotal
             );
-            totalPrice -= royaltyTotal;
+            netPrice -= royaltyTotal;
         }
 
         // Calculate & Transfer platfrom fee
@@ -323,12 +328,13 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
             feeRecipient,
             platformFeeTotal
         );
+        netPrice -= platformFeeTotal;
 
         // Transfer to nft owner
         IERC20(listedNft.payToken).transferFrom(
             msg.sender,
             listedNft.seller,
-            totalPrice - platformFeeTotal
+            netPrice
         );
 
         // Transfer NFT to buyer
@@ -343,6 +349,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
             listedNft.tokenId,
             listedNft.payToken,
             _price,
+            netPrice,
             listedNft.seller,
             msg.sender
         );
@@ -407,9 +414,9 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 _tokenId,
         address _offerer
     )
-        external
-        isOfferredNFT(_nft, _tokenId, _offerer)
-        isListedNFT(_nft, _tokenId)
+    external
+    isOfferredNFT(_nft, _tokenId, _offerer)
+    isListedNFT(_nft, _tokenId)
     {
         require(
             listNfts[_nft][_tokenId].seller == msg.sender,
@@ -424,7 +431,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         offer.accepted = true;
 
         uint256 offerPrice = offer.offerPrice;
-        uint256 totalPrice = offerPrice;
+        uint256 netPrice = offerPrice;
 
         address royaltyRecipient = collectionFactory.getRoyaltyRecipient(offer.nft);
         uint256 royaltyFee = collectionFactory.getRoyaltyFee(offer.nft);
@@ -436,15 +443,16 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
 
             // Transfer royalty fee to collection owner
             payToken.transfer(royaltyRecipient, royaltyTotal);
-            totalPrice -= royaltyTotal;
+            netPrice -= royaltyTotal;
         }
 
         // Calculate & Transfer platfrom fee
         uint256 platformFeeTotal = calculatePlatformFee(offerPrice);
         payToken.transfer(feeRecipient, platformFeeTotal);
+        netPrice -= platformFeeTotal;
 
         // Transfer to seller
-        payToken.transfer(list.seller, totalPrice - platformFeeTotal);
+        payToken.transfer(list.seller, netPrice);
 
         // Transfer NFT to offerer
         IERC721(list.nft).safeTransferFrom(
@@ -458,6 +466,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
             offer.tokenId,
             offer.payToken,
             offer.offerPrice,
+            netPrice,
             offer.offerer,
             list.seller
         );
@@ -537,8 +546,8 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         );
         require(
             _bidPrice >=
-                auctionNfts[_nft][_tokenId].heighestBid +
-                    auctionNfts[_nft][_tokenId].minBid,
+            auctionNfts[_nft][_tokenId].heighestBid +
+            auctionNfts[_nft][_tokenId].minBid,
             "less than min bid price"
         );
 
@@ -566,8 +575,8 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         require(!auctionNfts[_nft][_tokenId].success, "already resulted");
         require(
             msg.sender == owner() ||
-                msg.sender == auctionNfts[_nft][_tokenId].creator ||
-                msg.sender == auctionNfts[_nft][_tokenId].lastBidder,
+            msg.sender == auctionNfts[_nft][_tokenId].creator ||
+            msg.sender == auctionNfts[_nft][_tokenId].lastBidder,
             "not creator, winner, or owner"
         );
         require(
@@ -586,22 +595,22 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
         uint256 royaltyFee = collectionFactory.getRoyaltyFee(auction.nft);
 
         uint256 heighestBid = auction.heighestBid;
-        uint256 totalPrice = heighestBid;
+        uint256 netPrice = heighestBid;
 
         if (royaltyFee > 0) {
             uint256 royaltyTotal = calculateRoyalty(royaltyFee, heighestBid);
 
             // Transfer royalty fee to collection owner
             payToken.transfer(royaltyRecipient, royaltyTotal);
-            totalPrice -= royaltyTotal;
+            netPrice -= royaltyTotal;
         }
 
         // Calculate & Transfer platfrom fee
         uint256 platformFeeTotal = calculatePlatformFee(heighestBid);
         payToken.transfer(feeRecipient, platformFeeTotal);
-
+        netPrice -= platformFeeTotal;
         // Transfer to auction creator
-        payToken.transfer(auction.creator, totalPrice - platformFeeTotal);
+        payToken.transfer(auction.creator, netPrice);
 
         // Transfer NFT to the winner
         nft.transferFrom(address(this), auction.lastBidder, auction.tokenId);
@@ -612,6 +621,7 @@ contract B2NFTMarketplace is Initializable, PausableUpgradeable, OwnableUpgradea
             auction.creator,
             auction.lastBidder,
             auction.heighestBid,
+            netPrice,
             msg.sender
         );
     }
