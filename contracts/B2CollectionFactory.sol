@@ -4,24 +4,32 @@ pragma solidity ^0.8.20;
 import "./B2NFT.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "./IB2CollectionFactory.sol";
 
 /*
  Create new B2 NFT collection
+ upgrade: https://mirror.xyz/xyyme.eth/VSyU0JfmVrcqN-F28tX5mzYjxFFAosl8tDAQX3vB5Dg
 */
-contract B2CollectionFactory is OwnableUpgradeable ,PausableUpgradeable{
+contract B2CollectionFactory is IB2CollectionFactory, OwnableUpgradeable, PausableUpgradeable {
     // owner address => nft list
     mapping(address => address[]) private nfts;
-
+    // active
     mapping(address => bool) private b2NFTs;
 
-    mapping(address => string) private urls;
+    mapping(address => uint256) private royaltyFees;
+    mapping(address => address) private royaltyRecipients;
 
     event CreatedNFTCollection(
-        address creator,
+        address operator,
         address nft,
-        string name,
-        string symbol,
-        string _uri
+        address royaltyRecipient,
+        uint256 royaltyFees
+    );
+
+    event CloseNFTCollection(
+        address operator,
+        address nft,
+        bool active
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -58,22 +66,46 @@ contract B2CollectionFactory is OwnableUpgradeable ,PausableUpgradeable{
     }
 
     function createNFTCollection(
-         address nft,
-        string memory _name,
-        string memory _symbol,
-        string memory _uri
-    ) external isERC721(nft) whenNotPaused{
-        nfts[msg.sender].push(address(nft));
-        b2NFTs[address(nft)] = true;
-        urls[address(nft)] = _uri;
-        emit CreatedNFTCollection(msg.sender, address(nft), _name, _symbol, _uri);
+        address _nft,
+        address _royaltyRecipient,
+        uint256 _royaltyFee
+    ) external isERC721(_nft) whenNotPaused onlyOwner {
+        nfts[msg.sender].push(address(_nft));
+        b2NFTs[address(_nft)] = true;
+        royaltyFees[_nft] = _royaltyFee;
+        royaltyRecipients[_nft] = _royaltyRecipient;
+        emit CreatedNFTCollection(msg.sender, address(_nft), _royaltyRecipient, _royaltyFee);
+    }
+
+    function modifyNFTCollection(
+        address _nft,
+        bool _active
+    ) external isERC721(_nft) whenNotPaused onlyOwner {
+        b2NFTs[address(_nft)] = _active;
+        emit CloseNFTCollection(msg.sender, address(_nft), _active);
+    }
+
+    function setRoyaltyFee(address _nft, uint256 _royaltyFee, address _royaltyRecipient) external whenNotPaused onlyOwner {
+        require(_royaltyFee <= 10000, "can't more than 10 percent");
+        require(_royaltyRecipient != address(0));
+
+        royaltyFees[_nft] = _royaltyFee;
+        royaltyRecipients[_nft] = _royaltyRecipient;
     }
 
     function getOwnCollections() external view returns (address[] memory) {
         return nfts[msg.sender];
     }
 
-    function isB2NFT(address _nft) external view returns (bool) {
+    function getRoyaltyFee(address _nft) external view override(IB2CollectionFactory) returns (uint256) {
+        return royaltyFees[_nft];
+    }
+
+    function getRoyaltyRecipient(address _nft) external override(IB2CollectionFactory) view returns (address) {
+        return royaltyRecipients[_nft];
+    }
+
+    function isActive(address _nft) external override(IB2CollectionFactory) view returns (bool) {
         return b2NFTs[_nft];
     }
 

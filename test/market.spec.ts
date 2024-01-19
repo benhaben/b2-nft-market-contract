@@ -59,6 +59,7 @@ describe("B2 Marketplace", () => {
     marketplace = await upgrades.deployProxy(
       B2MarketplaceFactory,
       [
+        await b2CollectionFactory.getAddress(),
         await admin.getAddress(),
         platformFee,
         feeRecipient
@@ -87,7 +88,6 @@ describe("B2 Marketplace", () => {
     await payableToken.connect(deployer).transfer(offererAddress, toWei(1000000));
     expect(await payableToken.balanceOf(offererAddress)).to.eq(toWei(1000000));
 
-
     nft = await upgrades.deployProxy(
       B2NFTFactory,
       [
@@ -101,13 +101,8 @@ describe("B2 Marketplace", () => {
     await nft.waitForDeployment();
     const nftAddress = await nft.getAddress();
 
-    const tx = await b2CollectionFactory.connect(collectionCreator).createNFTCollection(nftAddress, "B2 Collection", "B2", "uri");
-    const receipt = await tx.wait();
-    let log = receipt?.logs.find((log) => b2CollectionFactory.interface.parseLog(log as any)?.name === "CreatedNFTCollection") as EventLog;
-    const collectionAddress = log.args.nft;
-
-    expect(nftAddress).not.eq(null, "Create collection is failed.");
-    await marketplace.connect(admin).setRoyaltyFee(nftAddress, BigInt(1000), nftFeeRecipient);
+    const tx = await b2CollectionFactory.connect(admin).createNFTCollection(nftAddress, nftFeeRecipient, BigInt(1000));
+    await tx.wait();
   });
 
   describe("List and Buy", () => {
@@ -134,9 +129,9 @@ describe("B2 Marketplace", () => {
     it("Creator should modify listed item", async () => {
       const modifyPrice = toWei(333);
       await expect(
-         marketplace.connect(buyer).modifyListedNFT(await nft.getAddress(), tokenId, modifyPrice)
-      ).to.be.revertedWith("not listed owner")
-      const tx =await marketplace.connect(collectionCreator).modifyListedNFT(await nft.getAddress(), tokenId, modifyPrice);
+        marketplace.connect(buyer).modifyListedNFT(await nft.getAddress(), tokenId, modifyPrice)
+      ).to.be.revertedWith("not listed owner");
+      const tx = await marketplace.connect(collectionCreator).modifyListedNFT(await nft.getAddress(), tokenId, modifyPrice);
       const receipt = await tx.wait();
       let log = receipt?.logs.find((log) => marketplace.interface.parseLog(log as any)?.name === "ModifyListedNFT") as EventLog;
       const eventNFT = log.args.nft;
@@ -148,13 +143,47 @@ describe("B2 Marketplace", () => {
     });
 
     it("Creator should cancel listed item", async () => {
-      const tx =await marketplace.connect(collectionCreator).cancelListedNFT(await nft.getAddress(), tokenId);
+      const tx = await marketplace.connect(collectionCreator).cancelListedNFT(await nft.getAddress(), tokenId);
       const receipt = await tx.wait();
       let log = receipt?.logs.find((log) => marketplace.interface.parseLog(log as any)?.name === "cancelListedNFT") as EventLog;
       expect(await nft.ownerOf(tokenId)).eq(await collectionCreator.getAddress(), "Cancel listed item is failed.");
     });
 
+    it("Nft Owner can't list if collection is not active", async () => {
+      await b2CollectionFactory.connect(admin).modifyNFTCollection(await nft.getAddress(), false);
+      await nft.connect(collectionCreator).approve(await marketplace.getAddress(), tokenId);
+      await expect(
+        marketplace.connect(collectionCreator).listNft(await nft.getAddress(), BigInt(tokenId), await payableToken.getAddress(), toWei(100000))
+      ).to.be.revertedWith("not active collection");
+      await b2CollectionFactory.connect(admin).modifyNFTCollection(await nft.getAddress(), true);
 
+      const tx = await marketplace.connect(collectionCreator).listNft(await nft.getAddress(), tokenId, await payableToken.getAddress(), toWei(100000));
+      const receipt = await tx.wait();
+      let log = receipt?.logs.find((log) => marketplace.interface.parseLog(log as any)?.name === "ListedNFT") as EventLog;
+      const eventNFT = log.args.nft;
+      expect(eventNFT).eq(await nft.getAddress(), "NFT is wrong.");
+
+      await b2CollectionFactory.connect(admin).modifyNFTCollection(await nft.getAddress(), false);
+
+      await expect(
+        marketplace.connect(collectionCreator).modifyListedNFT(await nft.getAddress(), BigInt(tokenId), toWei(200000))
+      ).to.be.revertedWith("not active collection");
+
+      const buyPrice = 100001;
+      await payableToken.connect(buyer).approve(await marketplace.getAddress(), toWei(buyPrice));
+
+      await expect(
+        marketplace.connect(buyer).buyNFT(await nft.getAddress(), tokenId, await payableToken.getAddress(), toWei(buyPrice))
+      ).to.be.revertedWith("not active collection");
+
+      { // for next test
+        await b2CollectionFactory.connect(admin).modifyNFTCollection(await nft.getAddress(), true);
+        const tx = await marketplace.connect(collectionCreator).cancelListedNFT(await nft.getAddress(), tokenId);
+        const receipt = await tx.wait();
+        let log = receipt?.logs.find((log) => marketplace.interface.parseLog(log as any)?.name === "cancelListedNFT") as EventLog;
+        expect(await nft.ownerOf(tokenId)).eq(await collectionCreator.getAddress(), "Cancel listed item is failed.");
+      }
+    });
 
     it("Creator should list NFT on the marketplace again!", async () => {
       await nft.connect(collectionCreator).approve(await marketplace.getAddress(), tokenId);
@@ -168,7 +197,6 @@ describe("B2 Marketplace", () => {
     });
 
     it("Buyer should buy listed NFT", async () => {
-      const tokenId = 0;
       const buyPrice = 100001;
       await payableToken.connect(buyer).approve(await marketplace.getAddress(), toWei(buyPrice));
       await marketplace.connect(buyer).buyNFT(await nft.getAddress(), tokenId, await payableToken.getAddress(), toWei(buyPrice));

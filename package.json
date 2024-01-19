@@ -4,7 +4,7 @@
   "scripts": {
     "flat": "cross-env NODE_ENV=l2  hardhat remove-spdx-flatten  \"./contracts/B2NFT.sol\" > scripts/B2NFT.sol.f.sol",
     "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol'",
-    "clean": "rimraf -fr .openzeppelin abi artifacts cache typechain coverage",
+    "clean": "rimraf -fr abi artifacts cache typechain coverage",
     "test": "cross-env NODE_ENV=l2 hardhat test",
     "compile": "cross-env NODE_ENV=l2 hardhat compile --config hardhat.config.ts ",
     "coverage": "cross-env NODE_ENV=l2  hardhat coverage",

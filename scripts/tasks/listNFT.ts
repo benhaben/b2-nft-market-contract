@@ -1,6 +1,7 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { B2NFTMarketplace__factory } from "../../typechain-types";
+import { B2CollectionFactory__factory, B2NFTMarketplace__factory } from "../../typechain-types";
+import { B2NFTFactory__factory } from "../../typechain-types/factories/contracts/B2NFTFactory__factory";
 
 task("list", "list nft")
   .addParam("key", "sender key")
@@ -54,5 +55,23 @@ task("modify", "modify list nft price")
       const receipt = await tx.wait();
       console.log(receipt.hash);
       console.log("modify list nft price end");
+    }
+  );
+
+task("isactive", "is active nft")
+  .addParam("key", "sender key")
+  .addParam("nft", "nft Address")
+  .addParam("factory", "factory Address")
+  .setAction(
+    async (
+      { key,  nft, factory }: any,
+      hre: HardhatRuntimeEnvironment
+    ) => {
+
+      console.log("is active nft start");
+      const ethers = hre.ethers;
+      factory = B2CollectionFactory__factory.connect(factory,  new ethers.Wallet(key, ethers.provider));
+      console.log(await factory.isActive(nft));
+      console.log("is active nft end");
     }
   );
